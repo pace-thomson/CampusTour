@@ -1,12 +1,16 @@
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { Location, Region, locationService, schoolService } from '@/services/supabase';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ExpoLocation from 'expo-location';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import { Modal, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { Modal, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import MapView, { Callout, Marker, Overlay, PROVIDER_DEFAULT, PROVIDER_GOOGLE } from 'react-native-maps';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import { useFocusEffect } from '@react-navigation/native';
 
 // Define the location type based on our supabase service
@@ -34,6 +38,10 @@ export default function MapScreen() {
   const [schoolId, setSchoolId] = useState<string | null>(null);
   const [defaultRegion, setDefaultRegion] = useState<Region>(FALLBACK_REGION);
   const [primaryColor, setPrimaryColor] = useState<string>('#990000'); // Utah Tech red as fallback
+  
+  // Modal state for tour generation prompt
+  const [showTourModal, setShowTourModal] = useState(false);
+  const [hasTour, setHasTour] = useState<boolean | null>(null); // null = checking, true = has tour, false = no tour
   
   // Modal state for tour generation prompt
   const [showTourModal, setShowTourModal] = useState(false);
@@ -175,6 +183,40 @@ export default function MapScreen() {
     }, [])
   );
 
+  // Check for existing tour whenever the map screen is focused
+  useFocusEffect(
+    React.useCallback(() => {
+      const checkForTour = async () => {
+        try {
+          const savedTourStops = await AsyncStorage.getItem('tourStops');
+          const savedShowInterestSelection = await AsyncStorage.getItem('showInterestSelection');
+          
+          // User has a tour if there are tour stops and interest selection is not showing
+          let hasActiveTour = false;
+          
+          if (savedTourStops) {
+            const tourStops = JSON.parse(savedTourStops);
+            const showingInterestSelection = savedShowInterestSelection ? JSON.parse(savedShowInterestSelection) : true;
+            hasActiveTour = tourStops.length > 0 && !showingInterestSelection;
+          }
+          
+          setHasTour(hasActiveTour);
+          
+          // Show modal if no tour exists
+          if (!hasActiveTour) {
+            setShowTourModal(true);
+          }
+        } catch (error) {
+          console.error('Error checking for tour:', error);
+          setHasTour(false);
+          setShowTourModal(true);
+        }
+      };
+
+      checkForTour();
+    }, [])
+  );
+
   // Function to handle the "recenter map" button press
   const handleRecenterPress = () => {
     if (mapRef.current) {
@@ -227,6 +269,16 @@ export default function MapScreen() {
     setShowTourModal(false);
   };
 
+  // Handle modal actions
+  const handleGoToTour = () => {
+    setShowTourModal(false);
+    router.push('/tour');
+  };
+
+  const handleDismissModal = () => {
+    setShowTourModal(false);
+  };
+
   // Create dynamic styles with the primary color
   const dynamicStyles = {
     headerBorder: {
@@ -244,6 +296,9 @@ export default function MapScreen() {
       paddingHorizontal: 12,
       borderRadius: 16,
       marginRight: 15,
+    },
+    modalPrimaryButton: {
+      backgroundColor: primaryColor,
     },
     modalPrimaryButton: {
       backgroundColor: primaryColor,
@@ -495,6 +550,80 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 12,
     fontWeight: 'bold',
+  },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 24,
+    width: '100%',
+    maxWidth: 400,
+    alignItems: 'center',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  modalHeader: {
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  modalIcon: {
+    marginBottom: 12,
+  },
+  modalTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#333333',
+    textAlign: 'center',
+  },
+  modalMessage: {
+    fontSize: 16,
+    color: '#666666',
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: 24,
+  },
+  modalButtons: {
+    width: '100%',
+    gap: 12,
+  },
+  modalPrimaryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  modalButtonIcon: {
+    marginRight: 8,
+  },
+  modalPrimaryButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  modalSecondaryButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    backgroundColor: '#F5F5F5',
+    alignItems: 'center',
+  },
+  modalSecondaryButtonText: {
+    color: '#666666',
+    fontSize: 16,
+    fontWeight: '500',
   },
   // Modal styles
   modalOverlay: {
