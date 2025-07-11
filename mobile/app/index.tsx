@@ -3,6 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import React, { useState } from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { userTypeService, UserType, schoolService } from '@/services/supabase';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function TourTypeSelectionScreen() {
   const [selectedTourType, setSelectedTourType] = useState<UserType>(null);
@@ -41,6 +42,11 @@ export default function TourTypeSelectionScreen() {
     router.push('/map');
   };
 
+  const clearAsyncStorage = async () => {
+    await AsyncStorage.clear();
+    console.log('Async Storage cleared');
+  };
+
   return (
     <View style={styles.container}>
       <StatusBar style="light" />
@@ -52,6 +58,9 @@ export default function TourTypeSelectionScreen() {
         </TouchableOpacity>
         <TouchableOpacity style={styles.skipToMapButton} onPress={skipToMap}>
           <Text>Skip to map</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.skipToMapButton} onPress={clearAsyncStorage}>
+          <Text>Clear Async Storage</Text>
         </TouchableOpacity>
       </View>
 
